@@ -3,15 +3,14 @@ package com.example.xyzreader.remote;
 import android.util.Log;
 
 import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONTokener;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class RemoteEndpointUtil {
@@ -45,28 +44,18 @@ public class RemoteEndpointUtil {
     }
 
     static String fetchPlainText(URL url) throws IOException {
-        return new String(fetch(url), "UTF-8" );
-    }
 
-    static byte[] fetch(URL url) throws IOException {
-        InputStream in = null;
+        OkHttpClient client = new OkHttpClient();
 
-        try {
-            OkHttpClient client = new OkHttpClient();
-            HttpURLConnection conn = client.open(url);
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            in = conn.getInputStream();
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer)) > 0) {
-                out.write(buffer, 0, bytesRead);
-            }
-            return out.toByteArray();
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
 
-        } finally {
-            if (in != null) {
-                in.close();
-            }
-        }
+        Response response = client.newCall(request).execute();
+        if(response.isSuccessful())
+            return response.body().string();
+
+        return null;
+
     }
 }
