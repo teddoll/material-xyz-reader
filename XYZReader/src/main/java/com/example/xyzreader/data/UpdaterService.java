@@ -13,6 +13,7 @@ import android.util.Log;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.remote.HttpClientProvider;
+import com.example.xyzreader.remote.OttoBusProvider;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.Response;
@@ -43,17 +44,14 @@ public class UpdaterService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        boolean success = false;
+        if (hasNetwork()) {
 
-        if(!hasNetwork()) return;
+            // Don't even inspect the intent, we only do one thing, and that's fetch content.
+            success = updateData();
+        }
+        OttoBusProvider.getInstance().getBus().post(new UpdateCompleteEvent(success));
 
-        sendStickyBroadcast(
-                new Intent(BROADCAST_ACTION_STATE_CHANGE).putExtra(EXTRA_REFRESHING, true));
-
-        // Don't even inspect the intent, we only do one thing, and that's fetch content.
-        updateData();
-
-        sendStickyBroadcast(
-                new Intent(BROADCAST_ACTION_STATE_CHANGE).putExtra(EXTRA_REFRESHING, false));
     }
 
 
@@ -61,13 +59,13 @@ public class UpdaterService extends IntentService {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo info = cm.getActiveNetworkInfo();
         if (info != null && info.isConnected()) {
-            Log.d(TAG, "Not online, not refreshing.");
             return true;
         }
+        Log.d(TAG, "Not online, not refreshing.");
         return false;
     }
 
-    private void updateData() {
+    private boolean updateData() {
         JSONArray json;
         try {
             json = new JSONArray(getData(new URL(getString(R.string.base_url))));
@@ -78,11 +76,13 @@ public class UpdaterService extends IntentService {
 
         try {
             processData(json);
+            return true;
         } catch (JSONException e) {
             Log.d(TAG, "Failed to parse data", e);
         } catch (RemoteException | OperationApplicationException e) {
             Log.d(TAG, "Failed to save data to provider", e);
         }
+        return false;
 
 
     }
@@ -95,16 +95,16 @@ public class UpdaterService extends IntentService {
                 .build();
 
         Response response = client.newCall(request).execute();
-        if(response.isSuccessful())
+        if (response.isSuccessful())
             return response.body().string();
 
         return null;
     }
 
     private void processData(JSONArray array) throws JSONException, RemoteException, OperationApplicationException {
-        if(array == null) return;
+        if (array == null) return;
 
-        ArrayList<ContentProviderOperation> cpo = new ArrayList<ContentProviderOperation>();
+        ArrayList<ContentProviderOperation> cpo = new ArrayList<>();
 
         Uri dirUri = ItemsContract.Items.buildDirUri();
 
@@ -114,12 +114,12 @@ public class UpdaterService extends IntentService {
         for (int i = 0; i < array.length(); i++) {
             ContentValues values = new ContentValues();
             JSONObject object = array.getJSONObject(i);
-            values.put(ItemsContract.Items.SERVER_ID, object.getString("id" ));
-            values.put(ItemsContract.Items.AUTHOR, object.getString("author" ));
-            values.put(ItemsContract.Items.TITLE, object.getString("title" ));
-            values.put(ItemsContract.Items.BODY, object.getString("body" ));
-            values.put(ItemsContract.Items.THUMB_URL, object.getString("thumb" ));
-            values.put(ItemsContract.Items.PHOTO_URL, object.getString("photo" ));
+            values.put(ItemsContract.Items.SERVER_ID, object.getString("id"));
+            values.put(ItemsContract.Items.AUTHOR, object.getString("author"));
+            values.put(ItemsContract.Items.TITLE, object.getString("title"));
+            values.put(ItemsContract.Items.BODY, object.getString("body"));
+            values.put(ItemsContract.Items.THUMB_URL, object.getString("thumb"));
+            values.put(ItemsContract.Items.PHOTO_URL, object.getString("photo"));
             values.put(ItemsContract.Items.ASPECT_RATIO, object.getString("aspect_ratio"));
             try {
                 Date date = format.parse(object.getString("published_date"));
@@ -131,5 +131,13 @@ public class UpdaterService extends IntentService {
         }
 
         getContentResolver().applyBatch(ItemsContract.CONTENT_AUTHORITY, cpo);
+    }
+
+    public static class UpdateCompleteEvent {
+        public final boolean success;
+
+        public UpdateCompleteEvent(boolean success) {
+            this.success = success;
+        }
     }
 }
