@@ -7,6 +7,7 @@
         <item name="colorPrimary">@color/blue_gray_500</item>
         <item name="colorPrimaryDark">@color/blue_gray_700</item>
         <item name="colorAccent">@color/pink_a200</item>
+        <item name="android:windowContentTransitions">true</item>
     </style>
 
 
