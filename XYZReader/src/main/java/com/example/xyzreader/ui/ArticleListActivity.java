@@ -6,6 +6,7 @@ import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.design.widget.AppBarLayout;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
@@ -19,7 +20,6 @@ import android.widget.TextView;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
-import com.example.xyzreader.data.ItemsContract;
 import com.example.xyzreader.data.UpdaterService;
 import com.example.xyzreader.remote.OttoBusProvider;
 import com.squareup.otto.Subscribe;
@@ -99,7 +99,7 @@ public class ArticleListActivity extends AppCompatActivity implements
         Adapter adapter = new Adapter(cursor);
         adapter.setHasStableIds(true);
         mRecyclerView.setAdapter(adapter);
-        int columnCount = getResources().getInteger(R.integer.list_column_count);
+        int columnCount = getResources().getInteger(R.integer.columns);
         StaggeredGridLayoutManager sglm =
                 new StaggeredGridLayoutManager(columnCount, StaggeredGridLayoutManager.VERTICAL);
         mRecyclerView.setLayoutManager(sglm);
@@ -124,6 +124,23 @@ public class ArticleListActivity extends AppCompatActivity implements
             return mCursor.getLong(ArticleLoader.Query._ID);
         }
 
+        private Bundle getItemData(int position) {
+            Bundle b = new Bundle();
+            mCursor.moveToPosition(position);
+            b.putString(ArticleDetailActivity.ARG_ITEM_IMAGE, mCursor.getString(
+                    ArticleLoader.Query.PHOTO_URL));
+            b.putString(ArticleDetailActivity.ARG_ITEM_TITLE, mCursor.getString(
+                    ArticleLoader.Query.TITLE));
+            b.putString(ArticleDetailActivity.ARG_ITEM_AUTHOR, mCursor.getString(
+                    ArticleLoader.Query.AUTHOR));
+            b.putLong(ArticleDetailActivity.ARG_ITEM_DATE, mCursor.getLong(
+                    ArticleLoader.Query.PUBLISHED_DATE));
+            b.putString(ArticleDetailActivity.ARG_ITEM_BODY, mCursor.getString(
+                    ArticleLoader.Query.BODY));
+            return b;
+
+        }
+
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View view = getLayoutInflater().inflate(R.layout.list_item_article, parent, false);
@@ -131,8 +148,11 @@ public class ArticleListActivity extends AppCompatActivity implements
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    startActivity(new Intent(Intent.ACTION_VIEW,
-                            ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition()))));
+                    Intent i = new Intent(ArticleListActivity.this, ArticleDetailActivity.class);
+                    i.putExtra(ArticleDetailActivity.ARG_ITEM, getItemData(vh.getAdapterPosition()));
+                    ActivityOptionsCompat options = ActivityOptionsCompat.
+                            makeSceneTransitionAnimation(ArticleListActivity.this, vh.thumbnailView, "image");
+                    startActivity(i, options.toBundle());
                 }
             });
             return vh;

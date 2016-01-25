@@ -1,4 +1,4 @@
 <resources>
     <dimen name="photo_size">296dp</dimen>
-    <integer name="columns">2</integer>
+    <integer name="columns">3</integer>
 </resources>

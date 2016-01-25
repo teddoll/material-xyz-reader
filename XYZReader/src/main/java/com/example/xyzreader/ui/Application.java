@@ -13,7 +13,7 @@ public class Application extends android.app.Application {
     public void onCreate() {
         super.onCreate();
         /*
-        Set up Picasso
+         * Set up Picasso
          */
         Picasso.Builder builder = new Picasso.Builder(this);
         builder.downloader(new OkHttpDownloader(this, Integer.MAX_VALUE));
